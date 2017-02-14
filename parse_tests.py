@@ -11,9 +11,9 @@ def checkTest(actual, expected):
 
 def demoTest():
     print('Demo test of \'sample.lua\': ', end='')
-    expected = open('sample.lua', 'rt').read()
+    expected = open('test/sample-working.lua', 'rt').read()
     expected = "".join(expected.split())
-    actual = parser.parse('sample.lua')
+    actual = parser.parse('test/sample-working.lua')
     checkTest(actual, expected)
     print('okay')
 
@@ -214,5 +214,4 @@ blockTest()
 ifelseTest()
 paramsTest()
 mathsTest()
-
 demoTest()

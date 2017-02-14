@@ -8,11 +8,13 @@ savederrors = []
 errors = []
 lexer = shlex.shlex()
 reservedTokens = ['and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat', 'return', 'then', 'true', 'until', 'while', '(', ')', '[', ']']
-
+get_next_stat = 0
 
 def tokenize(inputfile):
     lexer = shlex.shlex(inputfile)
     return lexer
+
+
 
 
 def copyLexer(target, src):
@@ -34,7 +36,6 @@ def checkTokenOptional(lexer, optional):
     if (optional == -1):
         return -1
 
-    ##print(">>>~~checktoken")
     token = lexer.get_token()
     currentCheck = token
 
@@ -48,26 +49,21 @@ def checkTokenOptional(lexer, optional):
 
 
 def parseWord(lexer, word, optional = 0):
-    ##print('>>> WORD ' + word)
+   #print('>>> WORD ' + word)
     token = lexer.get_token()
     if (word == token):
-        ##print(token)
-        ##print('found word')
         return token
     elif optional == 1:
-        ##print('not found word, don\'t need to find word')
         lexer.push_token(token)
         return ''
     else:
-        ##print(token)
-        ##print('word not found')
         global errors
         errors.append('exact character not found')
         return ''
 
 
 def parseString(lexer):
-    ##print(">>> STRING")
+    #print(">>> STRING")
     token = lexer.get_token()
     if(token == '\''):
         lexercp = copy.deepcopy(lexer)
@@ -88,7 +84,7 @@ def parseString(lexer):
 
 
 def parseUnop(lexer):
-    ##print('>>> UNOP')
+   #print('>>> UNOP')
     token = lexer.get_token()
 
     if (token in ['-', 'not', '#']):
@@ -100,7 +96,7 @@ def parseUnop(lexer):
 
 
 def parseFieldsep(lexer, optional = 0):
-    ##print('>>> FIELDSEP')
+   #print('>>> FIELDSEP')
     token = lexer.get_token()
 
     if token in [',', ';']:
@@ -115,11 +111,9 @@ def parseFieldsep(lexer, optional = 0):
 
 
 def parseName(lexer):
-    ##print('>>> NAME')
+   #print('>>> NAME')
     token = lexer.get_token()
-    ##print(token)
     if (name.match(token) and token not in ['and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat', 'return', 'then', 'true', 'until', 'while', '(', ')', '[', ']']):
-        ##print('found name')
         return token
     else:
         global errors
@@ -128,7 +122,6 @@ def parseName(lexer):
 
 
 def parseNamelist(lexer, optional):
-    # #print('>>> NAMELIST')
     global errors
     optional = checkTokenOptional(lexer, optional)
     if (optional != -1):
@@ -153,7 +146,7 @@ def parseNamelist(lexer, optional):
 
 
 def parseField(lexer):
-    ##print('>>> FIELD')
+   #print('>>> FIELD')
     options = 0
     result = ''
     global errors
@@ -171,21 +164,21 @@ def parseField(lexer):
             return result
 
     errors.append('parseField error field not found')
-    return ''  # actual error not sure
+    return ''
 
 
-def parseFieldsepfield(lexer, optional = 0):
-    ##print('>>> FIELDSEPFIELD')
+def parseFieldsepfield(lexer):
+   #print('>>> FIELDSEPFIELD')
     return parseFieldsep(lexer) + parseField(lexer)
 
 
 def parseFieldlist(lexer):
-    ##print('>>> FIELDLIST')
+   #print('>>> FIELDLIST')
     return parseField(lexer) + parseFieldsepfield(lexer, 1) + parseFieldsep(lexer, 1)
 
 
 def parseTableconstructor(lexer):
-    ##print('>>> TABLE CONSTRUCTOR')
+   #print('>>> TABLE CONSTRUCTOR')
     token = lexer.get_token()
     if (token in ['{', '}']):
         return token
@@ -194,32 +187,32 @@ def parseTableconstructor(lexer):
 
 
 def parseDo(lexer):
-    ##print('>>> DO')
+   #print('>>> DO')
     return parseBlock(lexer) + parseEnd(lexer)
 
 
 def parseWhile(lexer):
-    ##print('>>> WHILE')
+   #print('>>> WHILE')
     return parseExp(lexer) + parseDo(lexer)
 
 
 def parseRepeat(lexer):
-    ##print('>>> REPEAT')
+   #print('>>> REPEAT')
     return parseBlock(lexer) + parseWord(lexer, 'until') + parseEnd(lexer)
 
 
 def parseIf(lexer):
-    ##print('>>> IF')
+   #print('>>> IF')
     return parseExp(lexer) + parseWord(lexer, 'then') + parseBlock(lexer)
 
 
 def parseFor(lexer):
-    ##print('>>> FOR')
+   #print('>>> FOR')
     return parseExp(lexer) + parseWord(lexer, ',') + parseExplist(lexer) + parseWord(lexer, 'do') + parseDo(lexer)
 
 
 def parseForin(lexer):
-    ##print('>>> FORIN')
+   #print('>>> FORIN')
     return parseWord(lexer, 'in') + parseExplist(lexer) + parseWord(lexer, 'do') + parseDo(lexer)
 
 
@@ -260,7 +253,7 @@ def parseElse(lexer):
 
 
 def parseExp(lexer):
-    #print(">>> EXP")
+   #print(">>> EXP")
     token = lexer.get_token()
 
     if (token in [';', 'end', 'then', 'else', 'elseif']):
@@ -276,7 +269,6 @@ def parseExp(lexer):
             copyLexer(lexer, lexercp)
             return '...'
     elif (number.match(token)):
-        # print('is number: ' + token)
         return token
 
     lexer.push_token(token)
@@ -284,49 +276,39 @@ def parseExp(lexer):
     result = ''
     global errors
     while (theseoptions < 5):
-        #print('loop parsing ' + token)
         errors = []
         lexercp = copy.deepcopy(lexer)
         if theseoptions == 0:
-            # print ('OPTION 1')
             result = parseString(lexercp)
-            # print('string test')
         elif theseoptions == 1:
-            # print ('OPTION 2')
             result = parsePrefixexp(lexercp)
             if len(errors) == 0:
                 lexercptest = copy.deepcopy(lexercp)
                 result2 = parseBinop(lexercptest)
                 if len(errors) == 0:
-                    # print('found binop')
                     result3 = parseExp(lexercptest)
                     if len(errors) == 0:
                         copyLexer(lexercp, lexercptest)
                         result = result + result2 + result3
                 errors = []
         elif theseoptions == 2:
-            # print ('OPTION 3')
             result = parseTableconstructor(lexercp)
         elif theseoptions == 3:
-            # print ('OPTION 4')
             result = parseExp(lexercp) + parseBinop(lexercp) + parseExp(lexercp)
         elif theseoptions == 4:
-            # print ('OPTION 5')
             result = parseUnop(lexercp) + parseExp(lexercp)
 
         if (len(errors) == 0):
-            # print('found exp ' + result)
             copyLexer(lexer, lexercp)
             return result
         else:
-            ##print('~~~~~~~~~~retrying')
             theseoptions = theseoptions + 1
 
     return ''
 
 
 def parseExplist(lexer, optional = 0):
-    #print(">>> EXPLIST")
+   #print(">>> EXPLIST")
     global errors
     errors = []
     lexercp = copy.deepcopy(lexer)
@@ -335,11 +317,9 @@ def parseExplist(lexer, optional = 0):
     if (len(errors) == 0):
         copyLexer(lexer, lexercp)
         token = lexer.get_token()
-        # #print('next token' + lexer.get_token())
         if (token == ','):
             return result + token + parseExplist(lexer)
         else:
-            #print('explist ' + result + ' : ' + token)
             lexer.push_token(token)
             return result
     elif optional == 1:
@@ -351,7 +331,7 @@ def parseExplist(lexer, optional = 0):
 
 
 def parseArgs(lexer):
-    #print(">>> ARGS")
+   #print(">>> ARGS")
     options = 0
     result = ''
     global errors
@@ -359,22 +339,15 @@ def parseArgs(lexer):
         errors = []
         lexercp = copy.deepcopy(lexer)
         if options == 0:
-            # print ('from args {}<<<<<<<<<<<<<<')
             result = parseWord(lexercp, '(') + parseExplist(lexercp) + parseWord(lexercp, ')')
-            #print('got out')
         elif options == 1:
             result = parseTableconstructor(lexercp)
         elif options == 2:
             result = parseString(lexercp)
 
-        #print('result = ' + result)
         if (len(errors) == 0):
-            #print('returning from args')
-            #print(result)
             copyLexer(lexer, lexercp)
             return result
-        # else:
-            ##print('error found in args')
 
         options += 1
 
@@ -383,14 +356,13 @@ def parseArgs(lexer):
 
 
 def parseLocalfunction(lexer):
-    ##print('>>> LOCAL FUNCTION')
+   #print('>>> LOCAL FUNCTION')
     return parseWord(lexer, 'function') + parseName(lexer) + parseFuncbody(lexer)
 
 
 def parseFunctioncall(lexer):
-    #print(">>> FUNCTION CALL")
+   #print(">>> FUNCTION CALL")
     token = lexer.get_token()
-    ##print(token)
     lexer.push_token(token)
     lexercp = copy.deepcopy(lexer)
     global errors
@@ -400,8 +372,6 @@ def parseFunctioncall(lexer):
     if (len(errors) == 0):
         copyLexer(lexer, lexercp)
         return result
-
-    ##print('IDSFBSDFSDFBSDF')
 
     lexercp = copy.deepcopy(lexer)
     errors = []
@@ -416,7 +386,7 @@ def parseFunctioncall(lexer):
 
 
 def parsePrefixexp(lexer):
-    #print('>>> PREFIXEXP')
+   #print('>>> PREFIXEXP')
     token = lexer.get_token()
 
     if token == '(':
@@ -435,39 +405,43 @@ def parsePrefixexp(lexer):
             result = parseFunctioncall(lexercp)
 
         if(len(errors) == 0):
-            ##print('found prefix')
             copyLexer(lexer, lexercp)
             return result
 
     errors.append('parsePrefixexp error not found prefixexp')
-    return '' #actual error not sure
+    return ''
 
 
 def parseEnd(lexer):
-    # print('>>> END')
+    ##print('>>> END')
     token = lexer.get_token()
     if (token == 'end'):
-        # print('found')
         return token
     else:
-        # print('end token: ' +token)
         global errors
-        errors.append('expected \'end\' got \''+ token + '\'')
-        ##print('an error')
-        return ''  # error
+        global get_next_stat
+        get_next_stat = 1
+        errors.append('Error in parseEnd expected \'end\' got \''+ token + '\'')
+        print_errors()
+        return 'end'
 
 
 def parseVar(lexer):
     global errors
+    global get_next_stat
     if (len(errors) != 0):
         return ''
-    #print('>>> VAR')
+   #print('>>> VAR')
     token = lexer.get_token()
-    #print(token)
 
     if (token in ['end']):
         errors.append('no var found')
         lexer.push_token(token)
+        return ''
+    elif number.match(token):
+        get_next_stat = 1
+        errors.append('Error in parseVar: expected one of type var got \'' + token + '\'')
+        print_errors()
         return ''
 
     lexer.push_token(token)
@@ -491,11 +465,10 @@ def parseVar(lexer):
 
     errors.append('no var found')
     return lexer.get_token()
-            # actual error
 
 
 def parseVarlist(lexer):
-    # print(">>> VARLIST")
+   #print(">>> VARLIST")
     global errors
     errors = []
     lexercp = copy.deepcopy(lexer)
@@ -504,11 +477,9 @@ def parseVarlist(lexer):
     if len(errors) == 0:
         copyLexer(lexer, lexercp)
         token = lexer.get_token()
-        # print('no errors: ' + token)
         if (token == ','):
             result += ',' + parseVarlist(lexer)
         elif (token == '('):
-            # print('we here')
             errors.append('not varlist')
             lexer.push_token(token)
             return ''
@@ -516,29 +487,25 @@ def parseVarlist(lexer):
             lexer.push_token(token)
         return result
     else:
-        # print('err')
-        errors = []
+        print('error in varlist')
         return ''
 
 
 def parseParlist(lexer):
-    # #print('>>> PARLIST')
+   #print('>>> PARLIST')
     token = lexer.get_token()
     global errors
 
     if (token == '.'):
-        # #print('dot')
         lexercp = copy.deepcopy(lexer)
         if (lexercp.get_token() == '.' and lexercp.get_token() == '.'):
-            # #print('dot dot dot')
             copyLexer(lexer, lexercp)
             return '...'
         else:
             errors.append('expecting ...')
             lexer.push_token(token)
-            return ''  # error expecting ...
+            return ''
     elif (token == ','):
-        # #print('comma')
         lexercp = copy.deepcopy(lexer)
         if (lexercp.get_token() != ','):
             return token + parseParlist(lexer)
@@ -550,19 +517,18 @@ def parseParlist(lexer):
         lexer.push_token(token)
         return ''
     else:
-        # #print('param')
         lexer.push_token(token)
         return parseNamelist(lexer, -1) + parseParlist(lexer)
 
 
 
 def parseFuncbody(lexer):
-    #print('>>> FUNCBODY')
+   #print('>>> FUNCBODY')
     return parseWord(lexer, '(') + parseParlist(lexer) + parseWord(lexer, ')') + parseBlock(lexer) + parseEnd(lexer)
 
 
 def parseFuncname(lexer):
-    #print('>>> FUNCNAME')
+   #print('>>> FUNCNAME')
 
     token = lexer.get_token()
     if (name.match(token)):
@@ -573,37 +539,33 @@ def parseFuncname(lexer):
             return '.' + token + parseFuncname(lexer)
         else:
             return token
-            #actual error
     elif (token == ':'):
         token = lexer.get_token()
         if (name.match(token)):
             return ':' + token + parseFuncname(lexer)
         else:
             return token
-            # actual error
     else:
         lexer.push_token(token)
         return ''
 
 
 def parseFunction(lexer):
-    #print(">>> FUNCTION")
+   #print(">>> FUNCTION")
     token = lexer.get_token()
-    ##print(token)
     if (token == 'function'):
         return token + parseFuncbody(lexer)
     else:
-        ##print('function error')
         global errors
         errors.append('function not found')
         return ''
 
 
 def parseStat(lexer, recur = 0):
-    # print(">>> STAT")
+   #print(">>> STAT")
     global errors
+    global get_next_stat
     token = lexer.get_token()
-    # print(token)
     if(token in ['end'] or token == lexer.eof or token == ''):
         lexer.push_token(token)
         errors.append('end of text error')
@@ -617,7 +579,6 @@ def parseStat(lexer, recur = 0):
     elif token == 'if':
         return token + parseIf(lexer) + parseElseif(lexer) + parseElse(lexer) + parseEnd(lexer)
     elif token == 'for':
-        #print('we here')
         lexercp = copy.deepcopy(lexer)
         result = parseName(lexercp)
         nexttoken = lexercp.get_token()
@@ -628,7 +589,6 @@ def parseStat(lexer, recur = 0):
             lexer.push_token(nexttoken)
             return token + parseNamelist(lexer, -1) + parseForin(lexer)
     elif token == 'function':
-        #print('SOME MORE FUNCTION SHIZ DECLERATION ASDASDASDASDASASDASD')
         return token + parseFuncname(lexer) + parseFuncbody(lexer)
     elif token == 'local':
         lexercp = copy.deepcopy(lexer)
@@ -638,7 +598,6 @@ def parseStat(lexer, recur = 0):
             lexercp = copy.deepcopy(lexer)
             result = token + parseNamelist(lexercp, -1)
             if len(errors) == 0:
-                #print('got here')
                 copyLexer(lexer, lexercp)
                 token = lexer.get_token()
                 if (token == '='):
@@ -665,27 +624,30 @@ def parseStat(lexer, recur = 0):
     errors = []
     result = parseVarlist(lexercp)
     if len(errors) == 0:
-        # print('we got some maths')
         copyLexer(lexer, lexercp)
         return result + parseWord(lexer, '=') + parseExplist(lexer)
+    elif get_next_stat == 1:
+        get_next_stat = 0
+        print_errors()
+        token = lexer.get_token()
+        print('the token responsible is: ' + token)
+        errors = []
+        return parseStat(lexer)
     else:
         errors = []
 
     lexercp = copy.deepcopy(lexer)
     result = parseFunctioncall(lexercp)
     if len(errors) == 0:
-        # print('WE GOT A FUNCTION CALL HERE -----------')
         copyLexer(lexer, lexercp)
         return result
-
-    #print('no route found')
 
     errors.append('no stat found')
     return ''
 
 
 def parseChunk(lexer):
-    # print('>>> CHUNK')
+   #print('>>> CHUNK')
     global errors
     errors = []
 
@@ -697,50 +659,36 @@ def parseChunk(lexer):
         lexercp = copy.deepcopy(lexer)
         result = parseExplist(lexercp)
         if len(errors) == 0:
-            # print ('return explise: ' + token + result)
             copyLexer(lexer, lexercp)
             token2 = lexer.get_token()
-            # print (token2)
             lexer.push_token(token2)
-
             return token + result
         else:
             errors = []
-            # print('token return: ' + token)
             return token
     elif token == 'break':
         return token
-    # print(token)
     lexer.push_token(token)
 
     lexercp = copy.deepcopy(lexer)
     result = parseStat(lexercp)
-    #print('passed stat')
     if (len(errors) == 0):
-        # print('nerrros: ' + result)
         copyLexer(lexer, lexercp)
-        #print('no errors?')
         token = lexer.get_token()
         if token == ';':
             temp = result + token + parseChunk(lexer)
-            #print('temp chunk: ' + temp)
             return temp
         lexer.push_token(token)
-        # print('pushed back on '+token)
         temp = result + parseChunk(lexer)
-        #print('temp chunk: ' + temp)
         return temp
     else:
-        # print('here in chunk: ' + result)
-        # print(errors)
-        # print(lexer.get_token())
         copyLexer(lexer, lexercp)
         errors = []
         return result
 
 
 def parseBlock(lexer):
-    #print('>>> BLOCK')
+   #print('>>> BLOCK')
     return parseChunk(lexer)
 
 
@@ -756,23 +704,17 @@ def parseBinop(lexer):
         return ''
 
 
+def print_errors():
+    global errors
+    for error in errors:
+        print(error)
+    errors = []
+
 def parse(filename):
     inputfile = open(filename, 'rt').read()
     lexer = tokenize(inputfile)
-    # while(token != lexer.eof and token != ''):
-        # #print(token)
-        # token = lexer.get_token()
     return parseBlock(lexer)
-    # token = lexer.get_token()
-    # while (token != lexer.eof):
-    #     ##print(token)
-    #     token = lexer.get_token()
 
-#     ##print(funcname.pattern)
-#     ##print(funcname.match('testing.tes8ting.8testing'))
-
-# parse('sample.lua')
-
-# if __name__ == "__main__":
-#     import sys
-#     parse(sys.argv[1])
+if __name__ == "__main__":
+    import sys
+    parse(sys.argv[1])
